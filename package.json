@@ -1,0 +1,34 @@
+{
+  "name": "@paulkinlan/reactive-agent",
+  "description": "",
+  "version": "0.0.1",
+  "dependencies": {
+    "@paulkinlan/reactive-prompt": "*"
+  },
+  "devDependencies": {
+    "vite": "^5.0.13",
+    "@preact/signals-core": "*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "type": "module",
+  "files": [
+    "dist/*"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "author": "Paul Kinlan <paul.kinlan@gmail.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulkinlan/reactive-agent"
+  }
+}

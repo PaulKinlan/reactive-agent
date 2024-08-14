@@ -1,0 +1,43 @@
+<script type="module">
+  import { effect } from "@preact/signals-core";
+
+  import { Agent, Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+
+  // Trying to emulate https://breadboard-ai.github.io/breadboard/docs/guides/librarian/#step-2-add-summarizer
+
+  const interviewer = new Agent({
+    persona: `You are an expert researcher whose job it is to interview the user to collect information about the kind of book they want.`,
+    task: `Based on the context provided and incorporating the history of the interview so far, offer a question that allows the user to easily pick or quickly type an answer`
+  });
+
+  const human = new Human({});
+
+  // Will call the agent in "loop" for each item in the plan.
+  const planner = new Planner({
+    task: "Create a simple 3-5 question interview to help the user discover an interesting book to read based on the provided context.",
+    loop: interviewer
+  });
+
+  const accumulator = new Accumulator();
+
+  planner.context.value = "Cars"// window.prompt(`What genre ?`);
+
+  // These are similar to breadboards wires.
+
+  effect(() => {
+    // The questions
+    console.log("PLANNER", planner.response.value);
+    // The answers
+    console.log("ACCUMULATOR", accumulator.response.value);
+
+    // Join these two together.
+  })
+
+  effect(() => {
+    accumulator.context.value = human.response.value;
+  })
+
+  effect(() => {
+    human.context.value = interviewer.response.value;
+  });
+</script>
