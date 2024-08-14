@@ -1,0 +1,23 @@
+<script type="module">
+  import { effect } from "@preact/signals-core";
+
+  import { Agent, Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+
+  const agent = new Agent({
+    persona: "You are a pirate and you speak like a pirate",
+    task: "You need to find out how old the user is"
+  })
+
+  const human = new Human({});
+
+  effect(() => {
+    human.context.value = agent.response.value;
+  });
+
+  effect(() => {
+    console.log(human.response.value)
+  });
+
+  agent.context.value = "My name is Paul";
+
+</script>
