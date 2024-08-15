@@ -6,39 +6,39 @@
   const human = new Human({});
 
   const interviewer = new Agent({
-    persona: "You are a pirate and speak like a pirate.",
-    task: `Ask just ONE question to help create the blog post based on the context`
+    persona: "You are an expert interviewer who helps people create blog posts. You speak like a pirate.",
+    task: `Rewrite the Question`
   })
 
   const accumulator = new Accumulator({});
 
   const planner = new Planner({
-    task: "Come up with 3-5 questions to collect just enough information from the user to create the blog post. The blog post will require a title and an author. Return JSON as described above.",
+    task: "The user is creating a blog post based on the supplied context. The blog post must contain at least Title, Author and the Body of the post. Come up with 3-5 tasks that collect information from the user which will enable us to create the blog post based on the supplied Context. Return JSON as described above.",
     loop: interviewer
   })
 
   planner.context.value = "Driving Cars fast and safely."
 
   effect(() => {
-    // This will log the output
-    console.log("Received: ", human.response.value);
-  });
+    const questions = planner.response.value;
+    const answers = accumulator.response.value;
 
-  effect(() => {
-    console.log(accumulator.response.value);
+    if (questions?.length == answers?.length) {
+      console.log(questions, answers);
+    }
   })
 
   effect(() => {
     /* 
       The Planner calls the interview for each task. 
-      The interviewer Agent will use the provided task and context to ask the "human" a question.
+      The Interviewer Agent will use the provided task and context to ask the "human" a question (i.e, it passes the question through an LLM to reformulate it).
     */
     console.log("Interviewer: ", interviewer.response.value);
     human.context.value = interviewer.response.value;
   })
 
   effect(() => {
-    // Collect all the responses from the human.
+    // Collect all the responses from the human so that we can join the results later
     accumulator.context.value = human.response.value;
   })
 

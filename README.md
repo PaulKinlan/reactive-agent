@@ -68,12 +68,15 @@ agent.context.value = "My name is Paul";
 
 ## Planner Agent
 
-The Planner Agent takes a `task` and works out a series of steps that should be performed by an agent set using `loop` parameter, given a context. For each step in the task, the `loop` Agent is called.
+The Planner Agent takes a `task` and works out a series of steps that should be performed by an agent set using `loop` parameter along with a given a context. For each step in the task, the `loop` Agent is called. The `response` is an array of `{task, immediateResult}` where immediateResult is the answer directly provided by the Agent defined in `loop`.
 
-The `persona` is pre-configured and can't be changed. The `task`
+The `persona` is pre-configured and can't be changed.
+
+The `task` is the goal that will be broken down in to individual tasks. You can constrain what is created here, i.e, "create one X" or "create 3-5 X's".
+
+The `context` helps shape the tasks.
 
 ```JavaScript
-
 import { effect } from "@preact/signals-core";
 import { Agent, Planner } from "@paulkinlan/reactive-agent";
 
@@ -94,8 +97,11 @@ const interviewPlanner = new Planner({
 });
 
 effect(() => {
+  // The output will be an single entry array of {task, immediateResult} so [{"Question", "Refined Question"}]
   console.log(interviewPlanner.response.value);
 })
+
+interviewPlanner.context.value = "The benefits of Market Gardening"
 ```
 
 ## Function/Tool calling Agent

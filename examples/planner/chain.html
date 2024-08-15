@@ -7,7 +7,7 @@
   const accumulator = new Accumulator({});
 
   const planner = new Planner({
-    task: "The user is creating a blog post. Come up with 3-5 questions to collect just enough information from the user to create the blog post. The post will require a title, an author and the post body. Return JSON as described above.",
+    task: "The user is creating a blog post consisting of a Title, Author and the Body. Come up with 3-5 questions to collect information from the user to create the blog post based on the supplied Context. Return JSON as described above.",
     loop: human
   })
 
