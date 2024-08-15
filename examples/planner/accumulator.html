@@ -1,0 +1,45 @@
+<script type="module">
+  import { effect } from "@preact/signals-core";
+
+  import { Agent, Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+
+  const human = new Human({});
+
+  const interviewer = new Agent({
+    persona: "You are a pirate and speak like a pirate.",
+    task: `Ask just ONE question to help create the blog post based on the context`
+  })
+
+  const accumulator = new Accumulator({});
+
+  const planner = new Planner({
+    task: "Come up with 3-5 questions to collect just enough information from the user to create the blog post. The blog post will require a title and an author. Return JSON as described above.",
+    loop: interviewer
+  })
+
+  planner.context.value = "Driving Cars fast and safely."
+
+  effect(() => {
+    // This will log the output
+    console.log("Received: ", human.response.value);
+  });
+
+  effect(() => {
+    console.log(accumulator.response.value);
+  })
+
+  effect(() => {
+    /* 
+      The Planner calls the interview for each task. 
+      The interviewer Agent will use the provided task and context to ask the "human" a question.
+    */
+    console.log("Interviewer: ", interviewer.response.value);
+    human.context.value = interviewer.response.value;
+  })
+
+  effect(() => {
+    // Collect all the responses from the human.
+    accumulator.context.value = human.response.value;
+  })
+
+</script>

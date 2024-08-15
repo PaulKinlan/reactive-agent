@@ -22,7 +22,8 @@ const interviewer = new Agent({
 interview.context.value = "How to build a car";
 
 effect(() => {
-  console.log(interviewer.value)
+  // This is where the agent starts to get resolved.
+  console.log(interviewer.response.value)
 })
 ```
 
@@ -37,7 +38,7 @@ import { Human } from "@paulkinlan/reactive-agent";
 const human = new Human({});
 
 effect(() => {
-  console.log(human.context.value)
+  console.log(human.response.value)
 })
 ```
 
@@ -91,6 +92,10 @@ const interviewPlanner = new Planner({
   task: `Based on the context, come up with ONE question to collect just enough information from the user about the social media post's topic and goals. Return JSON as described above`,
   loop: interviewer
 });
+
+effect(() => {
+  console.log(interviewPlanner.response.value);
+})
 ```
 
 ## Function/Tool calling Agent
@@ -117,5 +122,20 @@ const toolCaller = new ToolCaller({
   ]
 })
 
+effect(()=> {
+  // Log the result of the function call.
+  console.log(toolCaller.context.value)
+});
+
 toolCaller.context.value = "What is the weather in London?";
+```
+
+## Accumulator
+
+Full disclosure, this is a hack and there is a strong argument that this should just be done in the `effect`. This Agent accumulates input context changes so that they can be accessed later on.
+
+Why? An Agent generally takes the input `context` runs it through the prompts and adds the response on to the `response` attribute for use in the `effect`. As you build more complex agents that are chained together, the calling agent doesn't get a traditional return value and you might want to store it for access. Specifically, the `Planner` Agent takes an Agent to invoke on each step of the plan and you need to collate the response from each step via an Accumulator.
+
+```JavaScript
+const accumulator = new Accumulator();
 ```

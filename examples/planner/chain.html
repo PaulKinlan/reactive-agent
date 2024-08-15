@@ -1,0 +1,26 @@
+<script type="module">
+  import { effect } from "@preact/signals-core";
+
+  import { Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+
+  const human = new Human({});
+  const accumulator = new Accumulator({});
+
+  const planner = new Planner({
+    task: "The user is creating a blog post. Come up with 3-5 questions to collect just enough information from the user to create the blog post. The post will require a title, an author and the post body. Return JSON as described above.",
+    loop: human
+  })
+
+  planner.context.value = "Cars"
+
+  effect(() => {
+    // This will log the output
+    console.log(human.response.value);
+
+  });
+
+  effect(() => {
+    accumulator.context.value = human.response.value;
+  })
+
+</script>
