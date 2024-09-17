@@ -6,7 +6,7 @@
     "@paulkinlan/reactive-prompt": "*"
   },
   "devDependencies": {
-    "vite": "^5.0.13",
+    "vite": "^5.4.6",
     "@preact/signals-core": "*"
   },
   "scripts": {
