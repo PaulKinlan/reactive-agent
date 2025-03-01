@@ -1,25 +1,31 @@
-<script type="module">
-  import { effect } from "@preact/signals-core";
+<body>
+  <h1>Tool Caller</h1>
+  <p>Tool Caller is an Agent that will work out which function to call based on the prompt.</p>
+  <p>Open the console to see the results of the tool caller</p>
 
-  import { ToolCaller } from "@paulkinlan/reactive-agent";
+  <script type="module">
+    import { effect } from "@preact/signals-core";
 
-  const toolCaller = new ToolCaller({
-    tools: [{
-      func: function getWeather(location) { return `It's Hot in ${location}`; },
-      description: "Get the weather for a given location"
-    },
-    {
-      func: function getTime(location) { return Date.now(); },
-      description: "Get the time for a given location"
-    }
-    ]
-  })
+    import { ToolCaller } from "@paulkinlan/reactive-agent";
 
-  toolCaller.context.value = "What is the weather in London?";
+    const toolCaller = new ToolCaller({
+      tools: [{
+        func: function getWeather(location) { return `It's Hot in ${location}`; },
+        description: "Get the weather for a given location"
+      },
+      {
+        func: function getTime(location) { return Date.now(); },
+        description: "Get the time for a given location"
+      }
+      ]
+    })
 
-  setTimeout(() => toolCaller.context.value = "What is the time in Wales?", 5000);
+    toolCaller.context.value = "What is the weather in London?";
 
-  effect(() => {
-    console.log(toolCaller.response.value)
-  });
-</script>
+    setTimeout(() => toolCaller.context.value = "What is the time in Wales?", 5000);
+
+    effect(() => {
+      console.log(toolCaller.response.value)
+    });
+  </script>
+</body>

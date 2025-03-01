@@ -5,8 +5,8 @@
 
   const interviewer = new Agent({
     persona: `You are an expert interviewer, whose job it is to interview the 
-user to find out what their social media post is about and theirs goals for
-it are. Based on the theme provided in the context and incorporating the history of the interview so far, ask ONE question that allows the user to easily
+user to find out what their social media post is about and their goals for
+it. Based on the theme provided in the context and incorporating the history of the interview so far, ask ONE question that allows the user to easily
 and quickly type an answer. You only need to get one basic answer from the user.`,
     task: `Ask just ONE question that includes what this social media post is
 about and its main goal. You only need to elicit ONE answer.
@@ -58,3 +58,8 @@ Answer from user: ${accumulator.response.value[0]}`;
 
   interviewPlanner.context.value = "Web Development with AI";
 </script>
+
+<body>
+  <h1>Social Media Post Creator</h1>
+  <p>Open the console to see the results of the social media post creator</p>
+</body>
