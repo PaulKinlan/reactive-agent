@@ -1,31 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tool Caller Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .description {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input,
+    button {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    input {
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #27ae60;
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .preset-button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .preset-button:hover {
+      background-color: #2980b9;
+    }
+
+    .result-container {
+      background-color: #f0f7ff;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 5px solid #3498db;
+      margin-top: 20px;
+    }
+
+    .tool-info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    .result {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    .history {
+      margin-top: 30px;
+    }
+
+    .history-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .query {
+      color: #2c3e50;
+      font-weight: bold;
+    }
+
+    .response {
+      color: #27ae60;
+    }
+
+    .tool-name {
+      display: inline-block;
+      background-color: #e74c3c;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+
 <body>
-  <h1>Tool Caller</h1>
-  <p>Tool Caller is an Agent that will work out which function to call based on the prompt.</p>
-  <p>Open the console to see the results of the tool caller</p>
+  <h1>Tool Caller Demo</h1>
+
+  <div class="description">
+    <p>The Tool Caller is an Agent that automatically determines which function to call based on your prompt. It
+      analyzes your request and selects the most appropriate tool from its available options.</p>
+    <p>In this demo, the Tool Caller has access to two functions:</p>
+    <ul>
+      <li><strong>getWeather</strong>: Gets the weather for a specified location</li>
+      <li><strong>getTime</strong>: Gets the current time for a specified location</li>
+    </ul>
+    <p>Try asking about the weather or time in different locations, or use the preset buttons below!</p>
+  </div>
+
+  <div class="container">
+    <div class="input-group">
+      <input type="text" id="query-input" placeholder="Ask about weather or time (e.g., What's the weather in Tokyo?)">
+      <button id="submit-button">Ask</button>
+    </div>
+
+    <div class="preset-buttons">
+      <button class="preset-button" data-query="What is the weather in London?">Weather in London</button>
+      <button class="preset-button" data-query="What is the weather in Tokyo?">Weather in Tokyo</button>
+      <button class="preset-button" data-query="What is the weather in New York?">Weather in New York</button>
+      <button class="preset-button" data-query="What is the time in Paris?">Time in Paris</button>
+      <button class="preset-button" data-query="What is the time in Sydney?">Time in Sydney</button>
+      <button class="preset-button" data-query="What is the time in Wales?">Time in Wales</button>
+    </div>
+
+    <div id="result-container" class="result-container" style="display: none;">
+      <h3>Result</h3>
+      <div id="result" class="result"></div>
+      <div id="tool-info" class="tool-info"></div>
+    </div>
+
+    <div class="history">
+      <h3>Query History</h3>
+      <div id="history-list"></div>
+    </div>
+  </div>
 
   <script type="module">
     import { effect } from "@preact/signals-core";
-
     import { ToolCaller } from "@paulkinlan/reactive-agent";
 
+    // DOM Elements
+    const queryInput = document.getElementById('query-input');
+    const submitButton = document.getElementById('submit-button');
+    const resultContainer = document.getElementById('result-container');
+    const resultElement = document.getElementById('result');
+    const toolInfoElement = document.getElementById('tool-info');
+    const historyList = document.getElementById('history-list');
+    const presetButtons = document.querySelectorAll('.preset-button');
+
+    // Create the tool caller with two tools
     const toolCaller = new ToolCaller({
       tools: [{
         func: function getWeather(location) { return `It's Hot in ${location}`; },
         description: "Get the weather for a given location"
       },
       {
-        func: function getTime(location) { return Date.now(); },
+        func: function getTime(location) {
+          return Date.now();
+        },
         description: "Get the time for a given location"
-      }
-      ]
-    })
-
-    toolCaller.context.value = "What is the weather in London?";
-
-    setTimeout(() => toolCaller.context.value = "What is the time in Wales?", 5000);
-
-    effect(() => {
-      console.log(toolCaller.response.value)
+      }]
     });
+
+    // Track the last query and response
+    let lastQuery = '';
+    let lastResponse = '';
+    let lastTool = '';
+
+    // Handle query submission
+    submitButton.addEventListener('click', () => {
+      const query = queryInput.value.trim();
+      if (!query) return;
+
+      // Set the query as the context for the tool caller
+      toolCaller.context.value = query;
+
+      // Clear the input
+      queryInput.value = '';
+    });
+
+    // Handle preset button clicks
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const query = button.getAttribute('data-query');
+
+        // Set the query as the context for the tool caller
+        toolCaller.context.value = query;
+
+        // Update the input field with the query
+        queryInput.value = query;
+      });
+    });
+
+    // Effect to handle tool caller responses
+    effect(() => {
+      if (!toolCaller.response.value) return;
+
+      // Get the response
+      const response = toolCaller.response.value;
+
+      // Determine which tool was called
+      let toolName = toolCaller.response.value.toString();
+
+      // Update the result container
+      resultElement.textContent = response;
+      toolInfoElement.textContent = `Tool used: ${toolName}`;
+      resultContainer.style.display = 'block';
+
+      // Add to history if it's a new query
+      if (toolCaller.context.value !== lastQuery) {
+        lastQuery = toolCaller.context.value;
+        lastResponse = response;
+        lastTool = toolName;
+
+        // Create a history item
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <div class="query">Q: ${lastQuery}</div>
+          <div class="response"><span class="tool-name">${lastTool}</span> A: ${lastResponse}</div>
+        `;
+
+        // Add to the top of the history list
+        if (historyList.firstChild) {
+          historyList.insertBefore(historyItem, historyList.firstChild);
+        } else {
+          historyList.appendChild(historyItem);
+        }
+      }
+    });
+
+    // Initialize with a default query
+    toolCaller.context.value = "What is the weather in London?";
   </script>
 </body>
+
+</html>

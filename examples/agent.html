@@ -1,43 +1,316 @@
-<script type="module">
-  import { effect } from "@preact/signals-core";
+<!DOCTYPE html>
+<html lang="en">
 
-  import { Agent, Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Recommendation Agent</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
 
-  // Trying to emulate https://breadboard-ai.github.io/breadboard/docs/guides/librarian/#step-2-add-summarizer
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
 
-  const interviewer = new Agent({
-    persona: `You are an expert researcher whose job it is to interview the user to collect information about the kind of book they want.`,
-    task: `Based on the context provided and incorporating the history of the interview so far, offer a question that allows the user to easily pick or quickly type an answer`
-  });
+    .description {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
 
-  const human = new Human({});
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-  // Will call the agent in "loop" for each item in the plan.
-  const planner = new Planner({
-    task: "Create a simple 3-5 question interview to help the user discover an interesting book to read based on the provided context.",
-    loop: interviewer
-  });
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
 
-  const accumulator = new Accumulator();
+    input,
+    button {
+      padding: 10px;
+      font-size: 16px;
+    }
 
-  planner.context.value = "Cars"// window.prompt(`What genre ?`);
+    input {
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
 
-  // These are similar to breadboards wires.
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-  effect(() => {
-    // The questions
-    console.log("PLANNER", planner.response.value);
-    // The answers
-    console.log("ACCUMULATOR", accumulator.response.value);
+    button:hover {
+      background-color: #2980b9;
+    }
 
-    // Join these two together.
-  })
+    .question-box {
+      background-color: #e8f4fc;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 5px solid #3498db;
+    }
 
-  effect(() => {
-    accumulator.context.value = human.response.value;
-  })
+    .conversation {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
 
-  effect(() => {
-    human.context.value = interviewer.response.value;
-  });
-</script>
+    .question,
+    .answer {
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 80%;
+    }
+
+    .question {
+      background-color: #e8f4fc;
+      align-self: flex-start;
+      border-left: 5px solid #3498db;
+    }
+
+    .answer {
+      background-color: #f0f0f0;
+      align-self: flex-end;
+      border-right: 5px solid #95a5a6;
+    }
+
+    .summary {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e8f8f5;
+      border-radius: 5px;
+      border-left: 5px solid #2ecc71;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Book Recommendation Agent</h1>
+
+  <div class="description">
+    <p>This demo uses a Planner Agent to create a personalized book recommendation interview. The Planner creates 3-5
+      questions that an Interviewer Agent asks you. Based on your answers, the system can recommend books tailored to
+      your preferences.</p>
+    <p>Start by entering a book genre or topic you're interested in, then answer the questions to get personalized
+      recommendations.</p>
+  </div>
+
+  <div class="container">
+    <div class="input-group">
+      <input type="text" id="genre-input"
+        placeholder="Enter a book genre or topic (e.g., Science Fiction, History, Cars)" value="Cars">
+      <button id="start-button">Start Interview</button>
+    </div>
+
+    <div id="current-question" class="question-box hidden">
+      <p id="question-text"></p>
+      <div class="input-group">
+        <input type="text" id="answer-input" placeholder="Type your answer here">
+        <button id="submit-answer">Submit</button>
+      </div>
+    </div>
+
+    <div id="conversation" class="conversation"></div>
+
+    <div id="summary" class="summary hidden">
+      <h3>Book Recommendation Summary</h3>
+      <div id="summary-content"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { effect } from "@preact/signals-core";
+    import { Agent, Human, Planner, Accumulator } from "@paulkinlan/reactive-agent";
+
+    // DOM Elements
+    const genreInput = document.getElementById('genre-input');
+    const startButton = document.getElementById('start-button');
+    const currentQuestion = document.getElementById('current-question');
+    const questionText = document.getElementById('question-text');
+    const answerInput = document.getElementById('answer-input');
+    const submitAnswer = document.getElementById('submit-answer');
+    const conversation = document.getElementById('conversation');
+    const summary = document.getElementById('summary');
+    const summaryContent = document.getElementById('summary-content');
+
+    // Create agents
+    const interviewer = new Agent({
+      persona: `You are an expert researcher whose job it is to interview the user to collect information about the kind of book they want.`,
+      task: `Based on the context provided and incorporating the history of the interview so far, offer a question that allows the user to easily pick or quickly type an answer`
+    });
+
+    const human = new Human({});
+    const planner = new Planner({
+      task: "Create a simple 3-5 question interview to help the user discover an interesting book to read based on the provided context.",
+      loop: interviewer
+    });
+    const accumulator = new Accumulator();
+
+    // Track the current question index
+    let currentQuestionIndex = 0;
+    let questions = [];
+
+    // Start the interview process
+    startButton.addEventListener('click', () => {
+      // Reset the UI
+      currentQuestionIndex = 0;
+      conversation.innerHTML = '';
+      summary.classList.add('hidden');
+
+      // Set the genre from the input
+      const genre = genreInput.value.trim() || 'General Fiction';
+      planner.context.value = genre;
+
+      // Add a loading message
+      const loadingMsg = document.createElement('div');
+      loadingMsg.className = 'question';
+      loadingMsg.textContent = 'Preparing interview questions...';
+      conversation.appendChild(loadingMsg);
+    });
+
+    // Handle answer submission
+    submitAnswer.addEventListener('click', () => {
+      const answer = answerInput.value.trim();
+      if (!answer) return;
+
+      // Add the answer to the conversation
+      const answerElement = document.createElement('div');
+      answerElement.className = 'answer';
+      answerElement.textContent = answer;
+      conversation.appendChild(answerElement);
+
+      // Set the human response
+      human.response.value = answer;
+
+      // Clear the input
+      answerInput.value = '';
+
+      // Hide the question box until the next question is ready
+      currentQuestion.classList.add('hidden');
+    });
+
+    // Effect to handle planner responses
+    effect(() => {
+      if (!planner.response.value) return;
+
+      questions = planner.response.value;
+      console.log("PLANNER", questions);
+
+      // Remove any loading message
+      if (conversation.querySelector(':first-child')?.textContent === 'Preparing interview questions...') {
+        conversation.removeChild(conversation.querySelector(':first-child'));
+      }
+
+      // Display the first question
+      if (questions && questions.length > 0 && currentQuestionIndex === 0) {
+        displayNextQuestion();
+      }
+    });
+
+    // Effect to handle accumulator responses
+    effect(() => {
+      accumulator.context.value = human.response.value;
+    });
+
+    // Effect to handle interviewer responses
+    effect(() => {
+      if (!interviewer.response.value) return;
+
+      // Display the question in the UI
+      questionText.textContent = interviewer.response.value;
+      currentQuestion.classList.remove('hidden');
+
+      // Add the question to the conversation
+      const questionElement = document.createElement('div');
+      questionElement.className = 'question';
+      questionElement.textContent = interviewer.response.value;
+      conversation.appendChild(questionElement);
+
+      // Set the human context
+      human.context.value = interviewer.response.value;
+    });
+
+    // Effect to check if all questions have been answered
+    effect(() => {
+      const answers = accumulator.response.value;
+      if (!questions || !answers) return;
+
+      console.log("ACCUMULATOR", answers);
+
+      // If we have an answer, move to the next question
+      if (answers.length > currentQuestionIndex) {
+        currentQuestionIndex++;
+
+        // If we've answered all questions, show the summary
+        if (currentQuestionIndex >= questions.length) {
+          showSummary(questions, answers);
+        } else {
+          // Otherwise, display the next question
+          displayNextQuestion();
+        }
+      }
+    });
+
+    // Function to display the next question
+    function displayNextQuestion() {
+      if (currentQuestionIndex < questions.length) {
+        interviewer.context.value = questions[currentQuestionIndex];
+      }
+    }
+
+    // Function to show the summary
+    function showSummary(questions, answers) {
+      // Create a summary of the interview
+      let summaryHTML = '<p>Based on your responses:</p><ul>';
+
+      for (let i = 0; i < questions.length && i < answers.length; i++) {
+        summaryHTML += `<li><strong>Q: ${questions[i]}</strong><br>A: ${answers[i]}</li>`;
+      }
+
+      summaryHTML += '</ul><p>These preferences suggest you might enjoy books that are:</p>';
+
+      // Add some generic recommendations based on the genre
+      const genre = genreInput.value.trim();
+      if (genre.toLowerCase().includes('cars')) {
+        summaryHTML += `<ul>
+          <li>"Drive: The Surprising Truth About What Motivates Us" by Daniel Pink</li>
+          <li>"Go Like Hell: Ford, Ferrari, and Their Battle for Speed and Glory at Le Mans" by A.J. Baime</li>
+          <li>"The Art of Racing in the Rain" by Garth Stein</li>
+        </ul>`;
+      } else {
+        summaryHTML += `<p>Tailored to your specific interests in ${genre}. Visit your local bookstore or library with these preferences in mind!</p>`;
+      }
+
+      // Display the summary
+      summaryContent.innerHTML = summaryHTML;
+      summary.classList.remove('hidden');
+    }
+  </script>
+</body>
+
+</html>

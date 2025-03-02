@@ -127,32 +127,9 @@
   </div>
 
   <div class="container">
-    <div class="question-box">
-      <div id="question" class="question">How old are you?</div>
-      <div class="input-group">
-        <input type="text" id="answer-input" placeholder="Type your answer here">
-        <button id="submit-answer">Submit</button>
-      </div>
-    </div>
-
     <div id="response-box" class="response-box">
       <h3>Your Response</h3>
       <div id="response" class="response"></div>
-    </div>
-
-    <div class="new-question-box">
-      <h3>Ask a Different Question</h3>
-      <div class="input-group">
-        <input type="text" id="question-input" placeholder="Type a new question">
-        <button id="ask-question">Ask</button>
-      </div>
-
-      <div class="preset-buttons">
-        <button class="preset-button" data-question="What is your name?">What is your name?</button>
-        <button class="preset-button" data-question="Where are you from?">Where are you from?</button>
-        <button class="preset-button" data-question="What do you do for work?">What do you do for work?</button>
-        <button class="preset-button" data-question="What are your hobbies?">What are your hobbies?</button>
-      </div>
     </div>
   </div>
 
@@ -167,53 +144,13 @@
     const responseBox = document.getElementById('response-box');
     const responseElement = document.getElementById('response');
     const questionInput = document.getElementById('question-input');
-    const askQuestion = document.getElementById('ask-question');
     const presetButtons = document.querySelectorAll('.preset-button');
 
-    // Create the Human agent
-    const human = new Human((context) => {
-      return new Promise((resolve) => {
-        // Wait for the human response
-        submitAnswer.onclick = () => {
-          const answer = answerInput.value.trim();
-          if (!answer) return;
-
-          // Resolve the promise with the answer
-          resolve(answer);
-        };
-      });
-    });
+    // Create the Human agent that uses window.prompt
+    const human = new Human();
 
     // Set the initial question
     human.context.value = "How old are you?";
-
-    // Handle asking a new question
-    askQuestion.addEventListener('click', () => {
-      const question = questionInput.value.trim();
-      if (!question) return;
-
-      // Update the question
-      questionElement.textContent = question;
-      human.context.value = question;
-
-      // Clear the input and response
-      questionInput.value = '';
-      responseBox.style.display = 'none';
-    });
-
-    // Handle preset question buttons
-    presetButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const question = button.getAttribute('data-question');
-
-        // Update the question
-        questionElement.textContent = question;
-        human.context.value = question;
-
-        // Clear the response
-        responseBox.style.display = 'none';
-      });
-    });
 
     // Effect to handle human responses
     effect(() => {

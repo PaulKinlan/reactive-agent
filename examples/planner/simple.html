@@ -1,19 +1,316 @@
-<script type="module">
-  import { effect } from "@preact/signals-core";
+<!DOCTYPE html>
+<html lang="en">
 
-  import { Human, Planner } from "@paulkinlan/reactive-agent";
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Planner Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
 
-  const human = new Human({});
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
 
-  const planner = new Planner({
-    task: "The user is creating a blog post. Come up with 3-5 questions to collect just enough information from the user to create the blog post. The post will require a title, an author and the post body. Return JSON as described above.",
-    loop: human
-  })
+    .description {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
 
-  planner.context.value = "Cars"
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-  effect(() => {
-    // This will log the output
-    console.log(planner.response.value, human.response.value)
-  });
-</script>
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input,
+    button,
+    textarea {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    input,
+    textarea {
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background-color: #16a085;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #138a72;
+    }
+
+    .topic-section {
+      background-color: #e8f6f3;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 5px solid #16a085;
+    }
+
+    .questions-section {
+      background-color: #f0f7ff;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 5px solid #3498db;
+      margin-top: 20px;
+    }
+
+    .question-item {
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .question-number {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .answer-input {
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .blog-preview {
+      background-color: #f9f9f9;
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+      border: 1px solid #ddd;
+    }
+
+    .blog-title {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .blog-author {
+      color: #7f8c8d;
+      font-style: italic;
+      margin-bottom: 15px;
+    }
+
+    .blog-content {
+      white-space: pre-wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Blog Post Planner</h1>
+
+  <div class="description">
+    <p>This demo uses a Planner Agent to help you create a blog post. The Planner will generate 3-5 questions to collect
+      information for your blog post, including the title, author, and content.</p>
+    <p>Start by entering a topic for your blog post, then answer the questions to generate a preview of your post.</p>
+  </div>
+
+  <div class="container">
+    <div class="topic-section">
+      <h3>Blog Topic</h3>
+      <div class="input-group">
+        <input type="text" id="topic-input"
+          placeholder="Enter a topic for your blog post (e.g., Cars, Travel, Technology)" value="Cars">
+        <button id="generate-button">Generate Questions</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      Generating questions for your blog post...
+    </div>
+
+    <div id="questions-section" class="questions-section hidden">
+      <h3>Answer These Questions</h3>
+      <div id="questions-container"></div>
+    </div>
+
+    <div id="blog-preview" class="blog-preview hidden">
+      <h3>Blog Post Preview</h3>
+      <div class="blog-title" id="preview-title">Your Blog Title</div>
+      <div class="blog-author" id="preview-author">By Author Name</div>
+      <div class="blog-content" id="preview-content">Your blog content will appear here...</div>
+      <button id="new-blog-button" style="margin-top: 20px;">Create New Blog Post</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { effect } from "@preact/signals-core";
+    import { Human, Planner, Agent } from "@paulkinlan/reactive-agent";
+
+    // DOM Elements
+    const topicInput = document.getElementById('topic-input');
+    const generateButton = document.getElementById('generate-button');
+    const loadingElement = document.getElementById('loading');
+    const questionsSection = document.getElementById('questions-section');
+    const questionsContainer = document.getElementById('questions-container');
+    const blogPreview = document.getElementById('blog-preview');
+    const previewTitle = document.getElementById('preview-title');
+    const previewAuthor = document.getElementById('preview-author');
+    const previewContent = document.getElementById('preview-content');
+    const newBlogButton = document.getElementById('new-blog-button');
+
+    const addQuestionUI = (question, index) => {
+      const questionItem = document.createElement('div');
+      questionItem.className = 'question-item';
+
+      const questionText = document.createElement('div');
+      questionText.innerHTML = `<span class="question-number">${index + 1}</span> ${question}`;
+
+      const answerInput = document.createElement('textarea');
+      answerInput.className = 'answer-input';
+      answerInput.placeholder = 'Type your answer here...';
+
+      const button = document.createElement('button');
+      button.textContent = 'Submit';
+
+      questionItem.appendChild(questionText);
+      questionItem.appendChild(answerInput);
+      questionItem.appendChild(button);
+      questionsContainer.appendChild(questionItem);
+
+      return new Promise((resolve) => {
+        // Wait for the human response
+        button.addEventListener('click', () => {
+          const answer = answerInput.value.trim();
+          if (!answer) return;
+
+          // Set the human response
+          resolve(answer);
+        });
+      });
+    }
+
+    // Create the agents
+    let questionCount = 0;
+    const human = new Human(async (context) => {
+      // Add UI for human responses
+      return await addQuestionUI(context, questionCount++);
+      // We need to wait for an answer from the user.
+    });
+    const planner = new Planner({
+      task: "The user is creating a blog post. Come up with 3-5 questions to collect just enough information from the user to create a draft blog post. The post will require a title, an author and the post body. Return JSON as described above.",
+      loop: human
+    });
+    const blogPostCreator = new Agent({
+      persona: "You are a blog post creator. You take the user's answers and create a blog post with a title, author, and content.",
+      task: "Create a blog post based on the user's answers."
+    });
+
+    // Track questions and answers
+    let questions = [];
+    let answers = [];
+    let currentQuestionIndex = 0;
+
+    // Generate questions based on the topic
+    generateButton.addEventListener('click', () => {
+      // Reset state
+      questions = [];
+      answers = [];
+      currentQuestionIndex = 0;
+      questionsContainer.innerHTML = '';
+      blogPreview.classList.add('hidden');
+
+      // Show loading
+      questionsSection.classList.remove('hidden');
+      loadingElement.classList.remove('hidden');
+
+      // Set the topic
+      const topic = topicInput.value.trim() || 'General Blog Post';
+      planner.context.value = topic;
+    });
+
+
+    // Create a new blog post
+    newBlogButton.addEventListener('click', () => {
+      // Reset UI
+      questionsSection.classList.add('hidden');
+      blogPreview.classList.add('hidden');
+
+      // Clear the topic
+      topicInput.value = '';
+      topicInput.focus();
+    });
+
+    // Effect to handle planner responses
+    effect(() => {
+      if (!planner.response.value || planner.response.length == 0) return;
+
+      // Get the questions
+      questions = planner.response.value;
+      console.log("Questions:", questions);
+
+      // Hide loading
+      loadingElement.classList.add('hidden');
+      questionsSection.classList.remove('hidden');
+
+      blogPostCreator.context.value = questions.map(response => `${response.task}: ${response.immediateResult}`).join("\n");
+    });
+
+    effect(() => {
+      // Show the preview
+      if (blogPostCreator.response.value == undefined || blogPostCreator.response.value.length == 0) { return; }
+
+      blogPreview.classList.remove('hidden');
+
+      previewContent.innerText = blogPostCreator.response.value;
+    })
+
+    // Effect to log human responses
+    effect(() => {
+      if (!human.response.value) return;
+      console.log("Human response:", human.response.value);
+    });
+  </script>
+</body>
+
+</html>

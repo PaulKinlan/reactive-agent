@@ -1,65 +1,289 @@
-<script type="module">
-  import { effect } from "@preact/signals-core";
+<!DOCTYPE html>
+<html lang="en">
 
-  import { ToolCaller, Planner, Human, Agent, Accumulator } from "@paulkinlan/reactive-agent";
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media Caption Creator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
 
-  const interviewer = new Agent({
-    persona: `You are an expert interviewer, whose job it is to interview the 
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .description {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input,
+    button,
+    textarea {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    input,
+    textarea {
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #c0392b;
+    }
+
+    .question-box {
+      background-color: #fef5e7;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 5px solid #f39c12;
+      margin-bottom: 20px;
+    }
+
+    .caption-box {
+      background-color: #f5eef8;
+      padding: 20px;
+      border-radius: 5px;
+      border-left: 5px solid #8e44ad;
+      margin-top: 20px;
+      white-space: pre-wrap;
+    }
+
+    .caption-content {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.8;
+    }
+
+    .hashtags {
+      color: #3498db;
+      font-weight: bold;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Social Media Caption Creator</h1>
+
+  <div class="description">
+    <p>This demo uses AI agents to create professional social media captions for your posts. The system works in three
+      steps:</p>
+    <ol>
+      <li>You provide a topic for your social media post</li>
+      <li>An interviewer agent asks you a targeted question about your post</li>
+      <li>A caption creator agent generates a complete caption with text, hashtags, and emojis</li>
+    </ol>
+    <p>Try it out by entering a topic below and following the prompts!</p>
+  </div>
+
+  <div class="container">
+    <div class="input-group">
+      <input type="text" id="topic-input"
+        placeholder="Enter your social media post topic (e.g., Web Development with AI, Sustainable Fashion)"
+        value="Web Development with AI">
+      <button id="start-button">Create Caption</button>
+    </div>
+
+    <div id="question-box" class="question-box hidden">
+      <p id="question-text"></p>
+      <div class="input-group">
+        <textarea id="answer-input" placeholder="Type your answer here"></textarea>
+        <button id="submit-answer">Submit</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      Creating your perfect caption...
+    </div>
+
+    <div id="caption-box" class="caption-box hidden">
+      <h3>Your Social Media Caption</h3>
+      <div id="caption-content" class="caption-content"></div>
+      <button id="new-caption-button" style="margin-top: 15px;">Create New Caption</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { effect } from "@preact/signals-core";
+    import { ToolCaller, Planner, Human, Agent, Accumulator } from "@paulkinlan/reactive-agent";
+
+    // DOM Elements
+    const topicInput = document.getElementById('topic-input');
+    const startButton = document.getElementById('start-button');
+    const questionBox = document.getElementById('question-box');
+    const questionText = document.getElementById('question-text');
+    const answerInput = document.getElementById('answer-input');
+    const submitAnswer = document.getElementById('submit-answer');
+    const loadingElement = document.getElementById('loading');
+    const captionBox = document.getElementById('caption-box');
+    const captionContent = document.getElementById('caption-content');
+    const newCaptionButton = document.getElementById('new-caption-button');
+
+    // Create agents
+    const interviewer = new Agent({
+      persona: `You are an expert interviewer, whose job it is to interview the 
 user to find out what their social media post is about and their goals for
 it. Based on the theme provided in the context and incorporating the history of the interview so far, ask ONE question that allows the user to easily
 and quickly type an answer. You only need to get one basic answer from the user.`,
-    task: `Ask just ONE question that includes what this social media post is
+      task: `Ask just ONE question that includes what this social media post is
 about and its main goal. You only need to elicit ONE answer.
 Do so in a friendly and casual manner.`
-  });
+    });
 
-  const captionCreator = new Agent({
-    persona: `You are an expert social media caption creator. You take user
+    const captionCreator = new Agent({
+      persona: `You are an expert social media caption creator. You take user
 input and the summary of the business search results to create an caption such 
 as those found on Instagram that fit this company's profile and client needs.
 As an expert, you will decide on the text, hashtags and emojis needed for the caption.`,
-    task: `Create a complete social media caption based on the user's business and post details and your expert knowledge of the business world and social media.`
-  })
+      task: `Create a complete social media caption based on the user's business and post details and your expert knowledge of the business world and social media.`
+    });
 
-  const interviewPlanner = new Planner({
-    task: `Based on the context, come up with ONE question to collect just enough information from the user about the social media post's topic and goals. Return JSON as described above`,
-    loop: interviewer
-  });
+    const interviewPlanner = new Planner({
+      task: `Based on the context, come up with ONE question to collect just enough information from the user about the social media post's topic and goals. Return JSON as described above`,
+      loop: interviewer
+    });
 
+    const human = new Human({});
+    const accumulator = new Accumulator();
 
-  const human = new Human({});
-  const accumulator = new Accumulator();
+    // Start the caption creation process
+    startButton.addEventListener('click', () => {
+      // Reset UI
+      questionBox.classList.add('hidden');
+      captionBox.classList.add('hidden');
+      loadingElement.classList.remove('hidden');
 
-  // These are similar to breadboards wires.
+      // Set the topic from the input
+      const topic = topicInput.value.trim() || 'Social Media Marketing';
+      interviewPlanner.context.value = topic;
+    });
 
-  effect(() => {
-    if (interviewPlanner.response.value == undefined || accumulator.response.value == undefined || accumulator.response.value.length == 0) {
-      return;
-    }
+    // Handle answer submission
+    submitAnswer.addEventListener('click', () => {
+      const answer = answerInput.value.trim();
+      if (!answer) return;
 
-    // Join these two together.
-    captionCreator.context.value = ` 
+      // Hide question box and show loading
+      questionBox.classList.add('hidden');
+      loadingElement.classList.remove('hidden');
+
+      // Set the human response
+      human.response.value = answer;
+
+      // Clear the input
+      answerInput.value = '';
+    });
+
+    // Create a new caption
+    newCaptionButton.addEventListener('click', () => {
+      // Reset UI
+      captionBox.classList.add('hidden');
+
+      // Start the process again
+      startButton.click();
+    });
+
+    // Effect to handle interviewer responses
+    effect(() => {
+      if (!interviewer.response.value) return;
+
+      // Display the question in the UI
+      questionText.textContent = interviewer.response.value;
+
+      // Hide loading and show question box
+      loadingElement.classList.add('hidden');
+      questionBox.classList.remove('hidden');
+
+      // Set the human context
+      human.context.value = interviewer.response.value;
+    });
+
+    // Effect to handle accumulator responses
+    effect(() => {
+      accumulator.context.value = human.response.value;
+    });
+
+    // Effect to create caption when we have both question and answer
+    effect(() => {
+      if (interviewPlanner.response.value == undefined ||
+        accumulator.response.value == undefined ||
+        accumulator.response.value.length == 0) {
+        return;
+      }
+
+      // Join these two together for the caption creator
+      captionCreator.context.value = ` 
 Question to user: ${interviewPlanner.response.value[0]}
 Answer from user: ${accumulator.response.value[0]}`;
-  })
+    });
 
-  effect(() => {
-    accumulator.context.value = human.response.value;
-  })
+    // Effect to display the caption
+    effect(() => {
+      if (!captionCreator.response.value) return;
 
-  effect(() => {
-    console.log("Caption: ", captionCreator.response.value);
-  })
+      console.log("Caption: ", captionCreator.response.value);
 
-  effect(() => {
-    // interviewer to human
-    human.context.value = interviewer.response.value;
-  })
+      // Format the caption with hashtags highlighted
+      let formattedCaption = captionCreator.response.value;
 
-  interviewPlanner.context.value = "Web Development with AI";
-</script>
+      // Highlight hashtags
+      formattedCaption = formattedCaption.replace(/#(\w+)/g, '<span class="hashtags">#$1</span>');
 
-<body>
-  <h1>Social Media Post Creator</h1>
-  <p>Open the console to see the results of the social media post creator</p>
+      // Display the caption
+      captionContent.innerHTML = formattedCaption;
+
+      // Hide loading and show caption box
+      loadingElement.classList.add('hidden');
+      captionBox.classList.remove('hidden');
+    });
+  </script>
 </body>
+
+</html>
